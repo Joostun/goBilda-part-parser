@@ -15,12 +15,13 @@ class part:
         # sku
 
         element1 = soup.find(class_="productView-sku-input")
-        if element1:
+        if element1 and "value" in element1:
             sku = element1["value"]
             self.sku = sku
         else:
             sku = "N/A"
             self.sku = sku
+        
         
         #title
 

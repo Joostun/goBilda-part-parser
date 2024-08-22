@@ -2,8 +2,6 @@ import requests
 import threading
 import time
 from bs4 import BeautifulSoup
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
 import pandas as pd
 from PartClass import part
 import numpy
@@ -14,11 +12,6 @@ pendingLinkList = ["https://www.gobilda.com/structure/","https://www.gobilda.com
 partLinkList = []
 genList = []
 counter = [2,]
-
-scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive.file","https://www.googleapis.com/auth/drive"]
-creds = ServiceAccountCredentials.from_json_keyfile_name("service_account.json", scope)
-client = gspread.authorize(creds)
-spreadsheet = client.open("Gobilda Spreadsheet").sheet1
 
 def multiParse():
     global startTime
@@ -89,8 +82,8 @@ multiParse()
 multiLabel()
 
 fields = ['Name', 'SKU', 'Link', 'Price', 'Step File']
-with open('MasterDocument.csv', 'w', encoding='utf-8') as f:  # Specify the encoding
-    write = csv.writer(f)
+with open('MasterDocument.csv', 'w', encoding='utf-8') as doc:
+    write = csv.writer(doc)
     write.writerow(fields)
     write.writerows(genList)
 
