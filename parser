@@ -1,0 +1,96 @@
+import requests
+import threading
+import time
+from bs4 import BeautifulSoup
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
+import pandas as pd
+from PartClass import part
+import numpy
+import csv
+
+totalLinkList = []
+pendingLinkList = ["https://www.gobilda.com/structure/","https://www.gobilda.com/motion/","https://www.gobilda.com/electronics/","https://www.gobilda.com/hardware/"]
+partLinkList = []
+genList = []
+counter = [2,]
+
+scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive.file","https://www.googleapis.com/auth/drive"]
+creds = ServiceAccountCredentials.from_json_keyfile_name("service_account.json", scope)
+client = gspread.authorize(creds)
+spreadsheet = client.open("Gobilda Spreadsheet").sheet1
+
+def multiParse():
+    global startTime
+    startTime = time.time()
+
+    threads = []
+    for i in range(32):
+        threads.append(threading.Thread(target=scrape))
+
+    for thread in threads:
+        thread.start()
+
+    for thread in threads:
+        thread.join()
+
+def multiLabel():
+    global startTime
+    startTime = time.time()
+
+    threads = []
+    for i in range(32):
+        threads.append(threading.Thread(target=label))
+
+    for thread in threads:
+        thread.start()
+
+    for thread in threads:
+        thread.join()
+
+
+def scrape():
+    while len(pendingLinkList) != 0:
+        miniparse()
+
+def initialize():
+    for x in pendingLinkList:
+        miniparse()
+
+def miniparse():
+    currentLink = pendingLinkList.pop()
+    reqs = requests.get(currentLink)
+    soup = BeautifulSoup(reqs.text, 'html.parser')
+    for paragraph in soup.find_all('li', 'product'):
+        for a in paragraph("a"):
+            linkName = a.get('href')
+            if "www.gobilda.com" not in linkName:
+                linkName = "https://www.gobilda.com" + linkName
+            if linkName not in totalLinkList:
+                print(linkName)
+                totalLinkList.append(linkName)
+                mini = requests.get(linkName)
+                if "data-product-sku" not in mini.text:
+                    pendingLinkList.append(linkName)
+                else:
+                    partLinkList.append(linkName)
+
+def label():
+    while len(partLinkList) != 0:
+        spreadsheetDataAppend()
+
+def spreadsheetDataAppend():
+    activeLink = partLinkList.pop()
+    current = part(activeLink)
+    genList.append(current.spreadsheet())
+        
+initialize()
+multiParse()
+multiLabel()
+
+fields = ['Name', 'SKU', 'Link', 'Price', 'Step File']
+with open('MasterDocument.csv', 'w', encoding='utf-8') as f:  # Specify the encoding
+    write = csv.writer(f)
+    write.writerow(fields)
+    write.writerows(genList)
+
